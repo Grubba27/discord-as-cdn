@@ -54,7 +54,7 @@ func main() {
 			fmt.Println("Error getting file", err.Error())
 			return fiber.NewError(fiber.StatusBadRequest, "Error getting file")
 		}
-
+		// do the checks and returns a file to be sent to discord
 		osFile, err := media.ToOSFile(ctx, file)
 		if err != nil {
 			fmt.Println("Error saving the file", err.Error())
@@ -84,13 +84,15 @@ func main() {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 
+		r := new(Return)
+		r.Url = m.Attachments[0].URL
+
+		// clean up and return
 		if err := os.Remove(media.Path); err != nil {
 			fmt.Println("Was not able to remove file", err.Error())
 			return fiber.NewError(fiber.StatusBadRequest, "Was not able to remove file")
 		}
 
-		r := new(Return)
-		r.Url = m.Attachments[0].URL
 		defer func(dg *discordgo.Session) {
 			err := dg.Close()
 			if err != nil {
