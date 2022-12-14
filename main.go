@@ -1,0 +1,114 @@
+package main
+
+import (
+	"fmt"
+	"github.com/bwmarrin/discordgo"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/joho/godotenv"
+	"log"
+	"os"
+)
+
+type Return struct {
+	Url string `json:"url"`
+}
+
+func init() {
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
+func main() {
+	app := fiber.New()
+	app.Use(cors.New())
+
+	app.Post("/sendFile", func(ctx *fiber.Ctx) error {
+		dg, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
+
+		if err != nil {
+			fmt.Println("error creating Discord session,", err)
+			return fiber.NewError(fiber.StatusBadRequest, "error creating Discord session")
+		}
+
+		err = dg.Open()
+		if err != nil {
+			fmt.Println("error opening connection,", err)
+			return fiber.NewError(fiber.StatusBadRequest, "error opening connection,")
+
+		}
+
+		c, err := dg.Channel(os.Getenv("CHANNEL_ID"))
+
+		if err != nil {
+			fmt.Println("Error getting channel, check env", err)
+			return fiber.NewError(fiber.StatusBadRequest, "Error getting channel, check env")
+		}
+		file, err := ctx.FormFile("file")
+
+		if err != nil {
+			fmt.Println("Error getting file", err.Error())
+			return fiber.NewError(fiber.StatusBadRequest, "Error getting file")
+		}
+
+		if file.Size > 10*1024*1024 {
+			fmt.Println("File is too big")
+			return fiber.NewError(fiber.StatusBadRequest, "File is too big")
+		}
+
+		fileMimeType := file.Header.Get("Content-Type")
+
+		allowedMimesList := []string{"image/jpeg", "image/pjpeg", "image/png", "image/gif"}
+		allowedMimes := map[string]bool{}
+		for _, mime := range allowedMimesList {
+			allowedMimes[mime] = true
+		}
+		if !allowedMimes[fileMimeType] {
+			fmt.Println("File is not an image")
+			return fiber.NewError(fiber.StatusBadRequest, "File is not an image")
+		}
+
+		path := fmt.Sprintf("./%s", file.Filename)
+		if err := ctx.SaveFile(file, path); err != nil {
+			fmt.Println("Was not able to save file", err.Error())
+			return fiber.NewError(fiber.StatusBadRequest, "Was not able to save file")
+		}
+
+		osFile, _ := os.Open(path)
+		data := &discordgo.MessageSend{Files: []*discordgo.File{{Name: file.Filename, ContentType: fileMimeType, Reader: osFile}}}
+
+		msg, err := dg.ChannelMessageSendComplex(os.Getenv("CHANNEL_ID"), data)
+
+		if err != nil {
+			fmt.Println("Error sending the message ", err.Error())
+			return fiber.NewError(fiber.StatusBadRequest, "Error sending the message")
+		}
+
+		m, err := dg.ChannelMessage(c.ID, msg.ID)
+
+		if err != nil {
+			fmt.Println(err)
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+
+		if err := os.Remove(path); err != nil {
+			fmt.Println("Was not able to remove file", err.Error())
+			return fiber.NewError(fiber.StatusBadRequest, "Was not able to remove file")
+		}
+
+		r := new(Return)
+		r.Url = m.Attachments[0].URL
+		defer func(dg *discordgo.Session) {
+			err := dg.Close()
+			if err != nil {
+				fmt.Println(err)
+			}
+		}(dg)
+		return ctx.JSON(r)
+	})
+
+	log.Fatal(app.Listen(":" + os.Getenv("PORT")))
+}
