@@ -28,4 +28,5 @@ It's a free service to store your photos dynamically, instead of hosting on your
 As said one of my friends([NicolasLopes7](https://github.com/NicolasLopes7)) and owner of the [repo](https://github.com/NicolasLopes7/dontUseCDN-UseDiscord) that I took inspiration from.
 
 
+## How to get .env information
 
