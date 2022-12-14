@@ -28,7 +28,7 @@ func main() {
 	app.Use(cors.New())
 
 	app.Post("/sendFile", func(ctx *fiber.Ctx) error {
-		dg, err := discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
+		dg, err := discordgo.New("Bot " + os.Getenv("BOT_TOKEN"))
 
 		if err != nil {
 			fmt.Println("error creating Discord session,", err)
