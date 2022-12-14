@@ -1,6 +1,7 @@
 package main
 
 import (
+	"discord-as-cdn/src/media"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gofiber/fiber/v2"
@@ -54,31 +55,20 @@ func main() {
 			return fiber.NewError(fiber.StatusBadRequest, "Error getting file")
 		}
 
-		if file.Size > 10*1024*1024 {
-			fmt.Println("File is too big")
-			return fiber.NewError(fiber.StatusBadRequest, "File is too big")
+		osFile, err := media.ToOSFile(ctx, file)
+		if err != nil {
+			fmt.Println("Error saving the file", err.Error())
+			return fiber.NewError(fiber.StatusBadRequest, "Error saving the file")
 		}
 
-		fileMimeType := file.Header.Get("Content-Type")
-
-		allowedMimesList := []string{"image/jpeg", "image/pjpeg", "image/png", "image/gif"}
-		allowedMimes := map[string]bool{}
-		for _, mime := range allowedMimesList {
-			allowedMimes[mime] = true
+		data := &discordgo.MessageSend{
+			Files: []*discordgo.File{
+				{
+					Name:        file.Filename,
+					ContentType: file.Header.Get("Content-Type"),
+					Reader:      osFile,
+				}},
 		}
-		if !allowedMimes[fileMimeType] {
-			fmt.Println("File is not an image")
-			return fiber.NewError(fiber.StatusBadRequest, "File is not an image")
-		}
-
-		path := fmt.Sprintf("./%s", file.Filename)
-		if err := ctx.SaveFile(file, path); err != nil {
-			fmt.Println("Was not able to save file", err.Error())
-			return fiber.NewError(fiber.StatusBadRequest, "Was not able to save file")
-		}
-
-		osFile, _ := os.Open(path)
-		data := &discordgo.MessageSend{Files: []*discordgo.File{{Name: file.Filename, ContentType: fileMimeType, Reader: osFile}}}
 
 		msg, err := dg.ChannelMessageSendComplex(os.Getenv("CHANNEL_ID"), data)
 
@@ -94,7 +84,7 @@ func main() {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 
-		if err := os.Remove(path); err != nil {
+		if err := os.Remove(media.Path); err != nil {
 			fmt.Println("Was not able to remove file", err.Error())
 			return fiber.NewError(fiber.StatusBadRequest, "Was not able to remove file")
 		}
