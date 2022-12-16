@@ -59,3 +59,14 @@ _copy id_:
 
 ![copy-id](./copy-id.png)
 
+
+## Next steps?
+
+Make a generic endpoint so that you can send in a post request other informations so that this can be used inside more easily by indie developers, would go something like this:
+```json
+{
+  "file": "...",
+  "botToken": "...",
+  "channelID": "..."
+}
+```
