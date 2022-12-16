@@ -42,12 +42,6 @@ func main() {
 
 		}
 
-		c, err := dg.Channel(os.Getenv("CHANNEL_ID"))
-
-		if err != nil {
-			fmt.Println("Error getting channel, check env", err)
-			return fiber.NewError(fiber.StatusBadRequest, "Error getting channel, check env")
-		}
 		file, err := ctx.FormFile("file")
 
 		if err != nil {
@@ -77,15 +71,8 @@ func main() {
 			return fiber.NewError(fiber.StatusBadRequest, "Error sending the message")
 		}
 
-		m, err := dg.ChannelMessage(c.ID, msg.ID)
-
-		if err != nil {
-			fmt.Println(err)
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-
 		r := new(Return)
-		r.Url = m.Attachments[0].URL
+		r.Url = msg.Attachments[0].URL
 
 		// clean up and return
 		if err := os.Remove(media.Path); err != nil {
