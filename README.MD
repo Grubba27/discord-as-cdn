@@ -1,6 +1,9 @@
 # Discord as CDN
 ![logo](./logo.jpeg)
 
+## Want to see the tutorial on how this is done?
+
+Here is the [dev.to blogpost](https://dev.to/grubba/using-discord-as-your-cdn-o4j)
 
 ## How to run your project
 first create a `.env` file and add your bot token, you can follow with the `.env.example` file
